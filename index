@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz de Conversions Mathématiques</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600&display=swap');
+        body {
+            font-family: 'Lexend', sans-serif;
+            background-color: #f0f7ff;
+        }
+        .quiz-card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
+        .fraction-display {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            vertical-align: middle;
+            margin: 0 8px;
+        }
+        .fraction-line {
+            width: 100%;
+            height: 2px;
+            background-color: #1e40af;
+            margin: 2px 0;
+        }
+        .progress-bar {
+            height: 12px;
+            border-radius: 6px;
+            background-color: #e5e7eb;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #10b981);
+            transition: width 0.4s ease;
+        }
+    </style>
+</head>
+<body class="p-4 min-h-screen flex items-center justify-center">
+    <div class="max-w-2xl w-full mx-auto">
+        <!-- Écran de démarrage -->
+        <div id="start-screen" class="quiz-card p-10 text-center">
+            <h1 class="text-4xl font-bold text-blue-800 mb-4">Défi des 30 Questions !</h1>
+            <p class="text-gray-600 mb-8 text-lg">Pratique tes conversions entre les fractions, les nombres décimaux et les pourcentages.</p>
+            <button onclick="startQuiz()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-10 rounded-full text-xl transition transform hover:scale-105 shadow-xl">
+                🚀 Commencer le Quiz
+            </button>
+        </div>
+
+        <!-- Écran de Quiz -->
+        <div id="quiz-screen" class="quiz-card p-8 hidden">
+            <div class="flex justify-between items-center mb-4">
+                <span id="question-counter" class="font-bold text-blue-600">Question 1 / 30</span>
+                <span id="score-counter" class="font-semibold text-green-600">Score: 0</span>
+            </div>
+            
+            <div class="progress-bar mb-8">
+                <div id="progress-fill" class="progress-fill" style="width: 3.33%"></div>
+            </div>
+
+            <div class="text-center mb-10">
+                <p class="text-gray-500 uppercase tracking-widest text-sm mb-2">Convertis cette valeur :</p>
+                <div id="question-display" class="text-4xl font-bold text-blue-900 min-h-[80px] flex items-center justify-center">
+                    <!-- Question générée ici -->
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <p id="instruction" class="text-center text-gray-700 font-medium"></p>
+                <div class="flex justify-center items-center gap-4">
+                    <div id="input-container" class="flex justify-center items-center">
+                        <!-- Inputs générés ici -->
+                    </div>
+                </div>
+                
+                <button id="btn-submit" onclick="validateAnswer()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-2xl text-lg transition shadow-lg">
+                    Vérifier
+                </button>
+            </div>
+
+            <div id="feedback" class="mt-6 p-4 rounded-xl text-center font-bold hidden"></div>
+        </div>
+
+        <!-- Écran de Fin -->
+        <div id="end-screen" class="quiz-card p-10 text-center hidden">
+            <h2 class="text-4xl font-bold text-blue-800 mb-4">Terminé !</h2>
+            <div class="text-6xl font-black text-blue-600 mb-6" id="final-score">0 / 30</div>
+            <p id="final-message" class="text-xl text-gray-600 mb-8"></p>
+            <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-10 rounded-full text-xl transition shadow-xl">
+                🔄 Recommencer
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const numbersInWords = {
+            10: "Dix centièmes", 20: "Vingt centièmes", 25: "Vingt-cinq centièmes", 30: "Trente centièmes",
+            40: "Quarante centièmes", 50: "Cinquante centièmes", 60: "Soixante centièmes", 75: "Soixante-quinze centièmes",
+            80: "Quatre-vingts centièmes", 90: "Quatre-vingt-dix centièmes", 5: "Cinq centièmes", 15: "Quinze centièmes",
+            33: "Trente-trois centièmes", 43: "Quarante-trois centièmes", 87: "Quatre-vingt-sept centièmes",
+            7: "Sept dixièmes", 2: "Deux dixièmes", 9: "Neuf dixièmes", 4: "Quatre dixièmes", 6: "Six dixièmes"
+        };
+
+        const totalQuestions = 30;
+        let currentStep = 0;
+        let score = 0;
+        let currentQuestionData = null;
+
+        function startQuiz() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.remove('hidden');
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            currentStep++;
+            if (currentStep > totalQuestions) {
+                showEndScreen();
+                return;
+            }
+
+            document.getElementById('question-counter').innerText = `Question ${currentStep} / ${totalQuestions}`;
+            document.getElementById('progress-fill').style.width = `${(currentStep / totalQuestions) * 100}%`;
+            document.getElementById('feedback').classList.add('hidden');
+            document.getElementById('btn-submit').disabled = false;
+            document.getElementById('btn-submit').innerText = "Vérifier";
+            document.getElementById('btn-submit').onclick = validateAnswer;
+
+            // Générer donnée aléatoire
+            const keys = Object.keys(numbersInWords);
+            const val = parseInt(keys[Math.floor(Math.random() * keys.length)]);
+            const isDixiems = val < 10 && numbersInWords[val].includes('dixièmes');
+            
+            currentQuestionData = {
+                val: val,
+                words: numbersInWords[val],
+                decimal: isDixiems ? (val/10).toFixed(1) : (val/100).toFixed(2),
+                num: val,
+                den: isDixiems ? 10 : 100,
+                percent: isDixiems ? val * 10 : val
+            };
+
+            // Type de question (Quelle forme on demande ?)
+            const types = ['words', 'decimal', 'fraction', 'percent'];
+            const givenType = types[Math.floor(Math.random() * types.length)];
+            let targetType;
+            do {
+                targetType = types[Math.floor(Math.random() * types.length)];
+            } while (targetType === givenType);
+
+            currentQuestionData.targetType = targetType;
+            displayQuestion(givenType, targetType);
+        }
+
+        function displayQuestion(given, target) {
+            const display = document.getElementById('question-display');
+            const inputContainer = document.getElementById('input-container');
+            const instruction = document.getElementById('instruction');
+            
+            // Affichage de la donnée fournie
+            if (given === 'words') display.innerText = currentQuestionData.words;
+            else if (given === 'decimal') display.innerText = currentQuestionData.decimal.replace('.', ',');
+            else if (given === 'percent') display.innerText = currentQuestionData.percent + "%";
+            else if (given === 'fraction') {
+                display.innerHTML = `
+                    <div class="fraction-display">
+                        <span>${currentQuestionData.num}</span>
+                        <div class="fraction-line"></div>
+                        <span>${currentQuestionData.den}</span>
+                    </div>
+                `;
+            }
+
+            // Préparation de l'input
+            inputContainer.innerHTML = '';
+            if (target === 'fraction') {
+                instruction.innerText = "Écris la fraction correspondante :";
+                inputContainer.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <input type="text" id="ans-num" class="w-20 p-2 border-2 border-blue-200 rounded-lg text-center text-2xl mb-2 focus:border-blue-500 outline-none" placeholder="?">
+                        <div class="w-24 h-1 bg-blue-800 rounded"></div>
+                        <input type="text" id="ans-den" class="w-20 p-2 border-2 border-blue-200 rounded-lg text-center text-2xl mt-2 focus:border-blue-500 outline-none" placeholder="?">
+                    </div>
+                `;
+            } else {
+                let suffix = "";
+                if (target === 'words') instruction.innerText = "Écris le nombre en lettres :";
+                if (target === 'decimal') instruction.innerText = "Écris le nombre en décimal (utilise la virgule) :";
+                if (target === 'percent') {
+                    instruction.innerText = "Écris le pourcentage :";
+                    suffix = " <span class='text-2xl font-bold ml-2'>%</span>";
+                }
+                
+                inputContainer.innerHTML = `
+                    <input type="text" id="ans-single" class="w-64 p-4 border-2 border-blue-200 rounded-2xl text-center text-2xl focus:border-blue-500 outline-none" placeholder="Ta réponse...">
+                    ${suffix}
+                `;
+            }
+        }
+
+        function validateAnswer() {
+            const target = currentQuestionData.targetType;
+            let isCorrect = false;
+            let userVal = "";
+
+            if (target === 'fraction') {
+                const n = document.getElementById('ans-num').value.trim();
+                const d = document.getElementById('ans-den').value.trim();
+                isCorrect = (parseInt(n) === currentQuestionData.num && parseInt(d) === currentQuestionData.den);
+                userVal = `${n}/${d}`;
+            } else {
+                userVal = document.getElementById('ans-single').value.trim().toLowerCase().replace(',', '.');
+                if (target === 'words') isCorrect = (userVal === currentQuestionData.words.toLowerCase());
+                else if (target === 'decimal') isCorrect = (parseFloat(userVal) === parseFloat(currentQuestionData.decimal));
+                else if (target === 'percent') isCorrect = (parseInt(userVal.replace('%','')) === currentQuestionData.percent);
+            }
+
+            const feedback = document.getElementById('feedback');
+            feedback.classList.remove('hidden', 'bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700');
+            
+            if (isCorrect) {
+                score++;
+                feedback.innerText = "✅ Excellent !";
+                feedback.classList.add('bg-green-100', 'text-green-700');
+                document.getElementById('score-counter').innerText = `Score: ${score}`;
+            } else {
+                let correctLabel = "";
+                if(target === 'fraction') correctLabel = `${currentQuestionData.num}/${currentQuestionData.den}`;
+                else if(target === 'decimal') correctLabel = currentQuestionData.decimal.replace('.', ',');
+                else if(target === 'percent') correctLabel = currentQuestionData.percent + "%";
+                else correctLabel = currentQuestionData.words;
+                
+                feedback.innerHTML = `❌ Oups ! La bonne réponse était : <br><span class="text-xl">${correctLabel}</span>`;
+                feedback.classList.add('bg-red-100', 'text-red-700');
+            }
+
+            const btn = document.getElementById('btn-submit');
+            btn.innerText = "Continuer";
+            btn.onclick = nextQuestion;
+        }
+
+        function showEndScreen() {
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('end-screen').classList.remove('hidden');
+            document.getElementById('final-score').innerText = `${score} / ${totalQuestions}`;
+            
+            const msg = document.getElementById('final-message');
+            if (score === 30) msg.innerText = "Incroyable ! Tu es un expert des conversions ! 🏆";
+            else if (score >= 24) msg.innerText = "Bravo ! C'est un excellent résultat ! 🌟";
+            else if (score >= 15) msg.innerText = "Pas mal ! Continue de pratiquer pour t'améliorer. 👍";
+            else msg.innerText = "N'hésite pas à relire l'aide-mémoire et à réessayer ! 💪";
+        }
+    </script>
+</body>
+</html>
