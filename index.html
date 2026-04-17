@@ -145,13 +145,13 @@
             }
             
             currentQuestionData = {
-                decimal: isDixiems ? (val/10).toFixed(1) : (val/100).toFixed(2),
+                targetVal: isDixiems ? val/10 : val/100, // Valeur numérique de référence pour comparaison
+                decimalDisplay: isDixiems ? (val/10).toFixed(1) : (val/100).toFixed(2),
                 num: val,
                 den: isDixiems ? 10 : 100,
                 percent: isDixiems ? val * 10 : val
             };
 
-            // Types de questions possibles (sans 'words')
             const types = ['decimal', 'fraction', 'percent'];
             const givenType = types[Math.floor(Math.random() * types.length)];
             let targetType;
@@ -168,8 +168,7 @@
             const inputContainer = document.getElementById('input-container');
             const instruction = document.getElementById('instruction');
             
-            // Affichage de la donnée fournie
-            if (given === 'decimal') display.innerText = currentQuestionData.decimal.replace('.', ',');
+            if (given === 'decimal') display.innerText = currentQuestionData.decimalDisplay.replace('.', ',');
             else if (given === 'percent') display.innerText = currentQuestionData.percent + "%";
             else if (given === 'fraction') {
                 display.innerHTML = `
@@ -181,7 +180,6 @@
                 `;
             }
 
-            // Préparation de l'input
             inputContainer.innerHTML = '';
             if (target === 'fraction') {
                 instruction.innerText = "Écris la fraction correspondante :";
@@ -212,13 +210,24 @@
             let isCorrect = false;
 
             if (target === 'fraction') {
-                const n = document.getElementById('ans-num').value.trim();
-                const d = document.getElementById('ans-den').value.trim();
-                isCorrect = (parseInt(n) === currentQuestionData.num && parseInt(d) === currentQuestionData.den);
+                const n = parseFloat(document.getElementById('ans-num').value.trim());
+                const d = parseFloat(document.getElementById('ans-den').value.trim());
+                // Vérification de l'équivalence mathématique : n/d doit être égal à la valeur cible
+                if (!isNaN(n) && !isNaN(d) && d !== 0) {
+                    const userVal = n / d;
+                    // On utilise une petite marge d'erreur pour les flottants
+                    isCorrect = Math.abs(userVal - currentQuestionData.targetVal) < 0.000001;
+                }
             } else {
-                const userVal = document.getElementById('ans-single').value.trim().toLowerCase().replace(',', '.');
-                if (target === 'decimal') isCorrect = (parseFloat(userVal) === parseFloat(currentQuestionData.decimal));
-                else if (target === 'percent') isCorrect = (parseInt(userVal.replace('%','')) === currentQuestionData.percent);
+                const rawInput = document.getElementById('ans-single').value.trim().toLowerCase().replace(',', '.');
+                const userValNum = parseFloat(rawInput.replace('%',''));
+                
+                if (target === 'decimal') {
+                    isCorrect = !isNaN(userValNum) && Math.abs(userValNum - currentQuestionData.targetVal) < 0.000001;
+                } else if (target === 'percent') {
+                    // Pour le pourcentage, l'input numérique doit être égal à percent (ex: 80 pour 80%)
+                    isCorrect = !isNaN(userValNum) && Math.abs(userValNum - currentQuestionData.percent) < 0.000001;
+                }
             }
 
             const feedback = document.getElementById('feedback');
@@ -232,7 +241,7 @@
             } else {
                 let correctLabel = "";
                 if(target === 'fraction') correctLabel = `${currentQuestionData.num}/${currentQuestionData.den}`;
-                else if(target === 'decimal') correctLabel = currentQuestionData.decimal.replace('.', ',');
+                else if(target === 'decimal') correctLabel = currentQuestionData.decimalDisplay.replace('.', ',');
                 else if(target === 'percent') correctLabel = currentQuestionData.percent + "%";
                 
                 feedback.innerHTML = `❌ La bonne réponse était : <br><span class="text-2xl">${correctLabel}</span>`;
