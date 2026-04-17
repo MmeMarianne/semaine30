@@ -99,13 +99,13 @@
     </div>
 
     <script>
-        const numbersInWords = {
-            10: "Dix centièmes", 20: "Vingt centièmes", 25: "Vingt-cinq centièmes", 30: "Trente centièmes",
-            40: "Quarante centièmes", 50: "Cinquante centièmes", 60: "Soixante centièmes", 75: "Soixante-quinze centièmes",
-            80: "Quatre-vingts centièmes", 90: "Quatre-vingt-dix centièmes", 5: "Cinq centièmes", 15: "Quinze centièmes",
-            33: "Trente-trois centièmes", 43: "Quarante-trois centièmes", 87: "Quatre-vingt-sept centièmes",
-            7: "Sept dixièmes", 2: "Deux dixièmes", 9: "Neuf dixièmes", 4: "Quatre dixièmes", 6: "Six dixièmes"
-        };
+        // Banque de valeurs (centièmes et dixièmes)
+        const mathValues = [
+            10, 20, 25, 30, 40, 50, 60, 75, 80, 90, 5, 15, 33, 43, 87, 55, 12, 65,
+            {val: 7, type: 'dixieme'}, {val: 2, type: 'dixieme'}, {val: 9, type: 'dixieme'}, 
+            {val: 4, type: 'dixieme'}, {val: 6, type: 'dixieme'}, {val: 8, type: 'dixieme'},
+            {val: 3, type: 'dixieme'}, {val: 5, type: 'dixieme'}
+        ];
 
         const totalQuestions = 30;
         let currentStep = 0;
@@ -132,22 +132,27 @@
             document.getElementById('btn-submit').innerText = "Vérifier";
             document.getElementById('btn-submit').onclick = validateAnswer;
 
-            // Générer donnée aléatoire
-            const keys = Object.keys(numbersInWords);
-            const val = parseInt(keys[Math.floor(Math.random() * keys.length)]);
-            const isDixiems = val < 10 && numbersInWords[val].includes('dixièmes');
+            // Sélectionner une valeur au hasard
+            const randomEntry = mathValues[Math.floor(Math.random() * mathValues.length)];
+            let val, isDixiems;
+
+            if (typeof randomEntry === 'object') {
+                val = randomEntry.val;
+                isDixiems = true;
+            } else {
+                val = randomEntry;
+                isDixiems = false;
+            }
             
             currentQuestionData = {
-                val: val,
-                words: numbersInWords[val],
                 decimal: isDixiems ? (val/10).toFixed(1) : (val/100).toFixed(2),
                 num: val,
                 den: isDixiems ? 10 : 100,
                 percent: isDixiems ? val * 10 : val
             };
 
-            // Type de question (Quelle forme on demande ?)
-            const types = ['words', 'decimal', 'fraction', 'percent'];
+            // Types de questions possibles (sans 'words')
+            const types = ['decimal', 'fraction', 'percent'];
             const givenType = types[Math.floor(Math.random() * types.length)];
             let targetType;
             do {
@@ -164,8 +169,7 @@
             const instruction = document.getElementById('instruction');
             
             // Affichage de la donnée fournie
-            if (given === 'words') display.innerText = currentQuestionData.words;
-            else if (given === 'decimal') display.innerText = currentQuestionData.decimal.replace('.', ',');
+            if (given === 'decimal') display.innerText = currentQuestionData.decimal.replace('.', ',');
             else if (given === 'percent') display.innerText = currentQuestionData.percent + "%";
             else if (given === 'fraction') {
                 display.innerHTML = `
@@ -183,22 +187,21 @@
                 instruction.innerText = "Écris la fraction correspondante :";
                 inputContainer.innerHTML = `
                     <div class="flex flex-col items-center">
-                        <input type="text" id="ans-num" class="w-20 p-2 border-2 border-blue-200 rounded-lg text-center text-2xl mb-2 focus:border-blue-500 outline-none" placeholder="?">
+                        <input type="number" id="ans-num" class="w-20 p-2 border-2 border-blue-200 rounded-lg text-center text-2xl mb-2 focus:border-blue-500 outline-none" placeholder="?">
                         <div class="w-24 h-1 bg-blue-800 rounded"></div>
-                        <input type="text" id="ans-den" class="w-20 p-2 border-2 border-blue-200 rounded-lg text-center text-2xl mt-2 focus:border-blue-500 outline-none" placeholder="?">
+                        <input type="number" id="ans-den" class="w-20 p-2 border-2 border-blue-200 rounded-lg text-center text-2xl mt-2 focus:border-blue-500 outline-none" placeholder="?">
                     </div>
                 `;
             } else {
                 let suffix = "";
-                if (target === 'words') instruction.innerText = "Écris le nombre en lettres :";
                 if (target === 'decimal') instruction.innerText = "Écris le nombre en décimal (utilise la virgule) :";
                 if (target === 'percent') {
                     instruction.innerText = "Écris le pourcentage :";
-                    suffix = " <span class='text-2xl font-bold ml-2'>%</span>";
+                    suffix = " <span class='text-2xl font-bold ml-2 text-blue-800'>%</span>";
                 }
                 
                 inputContainer.innerHTML = `
-                    <input type="text" id="ans-single" class="w-64 p-4 border-2 border-blue-200 rounded-2xl text-center text-2xl focus:border-blue-500 outline-none" placeholder="Ta réponse...">
+                    <input type="text" id="ans-single" class="w-48 p-4 border-2 border-blue-200 rounded-2xl text-center text-3xl font-bold text-blue-900 focus:border-blue-500 outline-none" placeholder="...">
                     ${suffix}
                 `;
             }
@@ -207,17 +210,14 @@
         function validateAnswer() {
             const target = currentQuestionData.targetType;
             let isCorrect = false;
-            let userVal = "";
 
             if (target === 'fraction') {
                 const n = document.getElementById('ans-num').value.trim();
                 const d = document.getElementById('ans-den').value.trim();
                 isCorrect = (parseInt(n) === currentQuestionData.num && parseInt(d) === currentQuestionData.den);
-                userVal = `${n}/${d}`;
             } else {
-                userVal = document.getElementById('ans-single').value.trim().toLowerCase().replace(',', '.');
-                if (target === 'words') isCorrect = (userVal === currentQuestionData.words.toLowerCase());
-                else if (target === 'decimal') isCorrect = (parseFloat(userVal) === parseFloat(currentQuestionData.decimal));
+                const userVal = document.getElementById('ans-single').value.trim().toLowerCase().replace(',', '.');
+                if (target === 'decimal') isCorrect = (parseFloat(userVal) === parseFloat(currentQuestionData.decimal));
                 else if (target === 'percent') isCorrect = (parseInt(userVal.replace('%','')) === currentQuestionData.percent);
             }
 
@@ -226,7 +226,7 @@
             
             if (isCorrect) {
                 score++;
-                feedback.innerText = "✅ Excellent !";
+                feedback.innerText = "✅ Bravo ! C'est juste.";
                 feedback.classList.add('bg-green-100', 'text-green-700');
                 document.getElementById('score-counter').innerText = `Score: ${score}`;
             } else {
@@ -234,14 +234,13 @@
                 if(target === 'fraction') correctLabel = `${currentQuestionData.num}/${currentQuestionData.den}`;
                 else if(target === 'decimal') correctLabel = currentQuestionData.decimal.replace('.', ',');
                 else if(target === 'percent') correctLabel = currentQuestionData.percent + "%";
-                else correctLabel = currentQuestionData.words;
                 
-                feedback.innerHTML = `❌ Oups ! La bonne réponse était : <br><span class="text-xl">${correctLabel}</span>`;
+                feedback.innerHTML = `❌ La bonne réponse était : <br><span class="text-2xl">${correctLabel}</span>`;
                 feedback.classList.add('bg-red-100', 'text-red-700');
             }
 
             const btn = document.getElementById('btn-submit');
-            btn.innerText = "Continuer";
+            btn.innerText = "Suivant";
             btn.onclick = nextQuestion;
         }
 
@@ -251,10 +250,10 @@
             document.getElementById('final-score').innerText = `${score} / ${totalQuestions}`;
             
             const msg = document.getElementById('final-message');
-            if (score === 30) msg.innerText = "Incroyable ! Tu es un expert des conversions ! 🏆";
-            else if (score >= 24) msg.innerText = "Bravo ! C'est un excellent résultat ! 🌟";
-            else if (score >= 15) msg.innerText = "Pas mal ! Continue de pratiquer pour t'améliorer. 👍";
-            else msg.innerText = "N'hésite pas à relire l'aide-mémoire et à réessayer ! 💪";
+            if (score === 30) msg.innerText = "Incroyable ! Score parfait ! 🏆";
+            else if (score >= 24) msg.innerText = "Excellent travail ! Tu maîtrises bien les nombres. 🌟";
+            else if (score >= 15) msg.innerText = "Bien joué ! Tu peux encore t'améliorer avec un peu de pratique. 👍";
+            else msg.innerText = "Continue de t'entraîner, tu vas y arriver ! 💪";
         }
     </script>
 </body>
